@@ -65,20 +65,23 @@ function drawPetal(x, y, size, rot, alpha) {
 }
 
 const debugEl = document.getElementById("debug");
-const invertXEl = document.getElementById("invertX");
 
 let tiltX = 0;
 let tiltY = 0;
 
 const smooth = (prev, next, k) => prev + (next - prev) * k;
 
+const ua = navigator.userAgent || navigator.vendor || window.opera;
+const isIOS = /iPad|iPhone|iPod/.test(ua);
+const isAndroid = /Android/.test(ua);
+
+const osSignX = isAndroid ? -1 : 1;
+
 function getScreenAngle() {
   const a = screen?.orientation?.angle;
   if (typeof a === "number") return a;
-
   const w = window.orientation;
   if (typeof w === "number") return w;
-
   return 0;
 }
 
@@ -88,13 +91,10 @@ function clamp(n, min, max) {
 
 function normalizeToScreenAxes(ax, ay) {
   const angle = ((getScreenAngle() % 360) + 360) % 360;
-
   let sx = ax;
   let sy = ay;
 
-  if (angle === 0) {
-    sx = ax; sy = ay;
-  } else if (angle === 90) {
+  if (angle === 90) {
     sx = ay; sy = -ax;
   } else if (angle === 180) {
     sx = -ax; sy = -ay;
@@ -118,20 +118,18 @@ function onMotion(e) {
   const nx = clamp(sx / 9.8, -1, 1);
   const ny = clamp(sy / 9.8, -1, 1);
 
-  const inv = invertXEl?.checked ? -1 : 1;
-
-  tiltX = smooth(tiltX, nx * inv, 0.12);
+  tiltX = smooth(tiltX, nx * osSignX, 0.12);
   tiltY = smooth(tiltY, ny, 0.12);
 
   debugEl.textContent =
-    `accG x:${ax.toFixed(2)} y:${ay.toFixed(2)} z:${az.toFixed(2)} | angle:${angle} | tiltX:${tiltX.toFixed(2)}`;
+    `OS:${isIOS ? "iOS" : isAndroid ? "Android" : "Other"} angle:${angle} tiltX:${tiltX.toFixed(2)}`;
 }
 
 const btn = document.getElementById("btn");
 btn.addEventListener("click", async () => {
   try {
     if (typeof DeviceMotionEvent !== "undefined" &&
-      typeof DeviceMotionEvent.requestPermission === "function") {
+        typeof DeviceMotionEvent.requestPermission === "function") {
       const res = await DeviceMotionEvent.requestPermission();
       if (res !== "granted") {
         btn.textContent = "許可されませんでした";
