@@ -1,225 +1,233 @@
 <!doctype html>
 <html lang="ja">
-  <head>
+
+<head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
-    <title>Sakura Tilt Demo</title>
+    <title>Sakura Demo</title>
     <style>
-      html, body { margin: 0; height: 100%; overflow: hidden; background: #0b1020; }
-      canvas { display: block; width: 100vw; height: 100vh; }
+        html,
+        body {
+            margin: 0;
+            height: 100%;
+            overflow: hidden;
+            background: #0b1020;
+        }
 
-      .ui {
-        position: fixed;
-        left: 12px; right: 12px; top: 12px;
-        display: flex; gap: 10px; align-items: center; justify-content: space-between;
-        color: #fff; font-family: system-ui, -apple-system, "Hiragino Kaku Gothic ProN", "Noto Sans JP", sans-serif;
-        z-index: 10;
-        pointer-events: none;
-      }
-      .panel {
-        pointer-events: auto;
-        background: rgba(0,0,0,0.35);
-        border: 1px solid rgba(255,255,255,0.15);
-        border-radius: 12px;
-        padding: 10px 12px;
-        backdrop-filter: blur(6px);
-      }
-      button {
-        appearance: none;
-        border: 0;
-        border-radius: 10px;
-        padding: 10px 12px;
-        font-weight: 700;
-        color: #0b1020;
-        background: #ffd6e6;
-        cursor: pointer;
-      }
-      .small { font-size: 12px; opacity: 0.85; }
-      .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace; }
+        canvas {
+            display: block;
+            width: 100vw;
+            height: 100vh;
+        }
+
+        .ui {
+            position: fixed;
+            left: 12px;
+            right: 12px;
+            top: 12px;
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            justify-content: space-between;
+            color: #fff;
+            font-family: system-ui, -apple-system, "Hiragino Kaku Gothic ProN", "Noto Sans JP", sans-serif;
+            z-index: 10;
+            pointer-events: none;
+        }
+
+        .panel {
+            pointer-events: auto;
+            background: rgba(0, 0, 0, 0.35);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            border-radius: 12px;
+            padding: 10px 12px;
+            backdrop-filter: blur(6px);
+        }
+
+        button {
+            appearance: none;
+            border: 0;
+            border-radius: 10px;
+            padding: 10px 12px;
+            font-weight: 700;
+            color: #0b1020;
+            background: #ffd6e6;
+            cursor: pointer;
+        }
+
+        .small {
+            font-size: 12px;
+            opacity: 0.85;
+        }
+
+        .mono {
+            font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+        }
     </style>
-  </head>
+</head>
 
-  <body>
+<body>
     <div class="ui">
-      <div class="panel small">
-        <div><b>🌸 Sakura Tilt Demo</b></div>
-        <div class="mono" id="debug">sensor: -</div>
-        <div class="small">端末を傾けると落下方向が少し斜めになります</div>
-      </div>
-
-      <div class="panel">
-        <button id="btn">動きを許可</button>
-      </div>
+        <div class="panel small">
+            <div><b>Sakura Demo</b></div>
+            <div class="mono" id="debug">sensor: -</div>
+            <div class="small">端末を傾けると落下方向が少し斜めになります</div>
+        </div>
+        <div class="panel">
+            <button id="btn">動きを許可</button>
+        </div>
     </div>
 
     <canvas id="c"></canvas>
 
     <script>
-      // ====== Canvas setup ======
-      const canvas = document.getElementById("c");
-      const ctx = canvas.getContext("2d");
+        const canvas = document.getElementById("c");
+        const ctx = canvas.getContext("2d");
 
-      function resize() {
-        const dpr = Math.max(1, window.devicePixelRatio || 1);
-        canvas.width = Math.floor(innerWidth * dpr);
-        canvas.height = Math.floor(innerHeight * dpr);
-        canvas.style.width = innerWidth + "px";
-        canvas.style.height = innerHeight + "px";
-        ctx.setTransform(dpr, 0, 0, dpr, 0, 0); // draw in CSS pixels
-      }
-      addEventListener("resize", resize);
-      resize();
+        function resize() {
+            const dpr = Math.max(1, window.devicePixelRatio || 1);
+            canvas.width = Math.floor(innerWidth * dpr);
+            canvas.height = Math.floor(innerHeight * dpr);
+            canvas.style.width = innerWidth + "px";
+            canvas.style.height = innerHeight + "px";
+            ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+        }
+        addEventListener("resize", resize);
+        resize();
 
-      // ====== Sakura particles ======
-      const PETAL_COUNT = 90;
-      const petals = [];
-      const rand = (a, b) => a + Math.random() * (b - a);
+        const PETAL_COUNT = 90;
+        const petals = [];
+        const rand = (a, b) => a + Math.random() * (b - a);
 
-      function resetPetal(p, fromTop = true) {
-        p.x = rand(0, innerWidth);
-        p.y = fromTop ? rand(-innerHeight * 0.2, 0) : rand(0, innerHeight);
-        p.size = rand(6, 14);
-        p.fall = rand(40, 90);       // base fall speed (px/s)
-        p.drift = rand(-15, 15);     // small personal drift (px/s)
-        p.rot = rand(0, Math.PI * 2);
-        p.rotSpeed = rand(-2.2, 2.2);
-        p.wobblePhase = rand(0, Math.PI * 2);
-        p.wobbleAmp = rand(4, 16);   // wobble in x
-        p.wobbleSpeed = rand(0.6, 1.6);
-        p.alpha = rand(0.6, 0.95);
-      }
+        function resetPetal(p, fromTop = true) {
+            p.x = rand(0, innerWidth);
+            p.y = fromTop ? rand(-innerHeight * 0.2, 0) : rand(0, innerHeight);
+            p.size = rand(6, 14);
+            p.fall = rand(40, 90);
+            p.drift = rand(-15, 15);
+            p.rot = rand(0, Math.PI * 2);
+            p.rotSpeed = rand(-2.2, 2.2);
+            p.wobblePhase = rand(0, Math.PI * 2);
+            p.wobbleAmp = rand(4, 16);
+            p.wobbleSpeed = rand(0.6, 1.6);
+            p.alpha = rand(0.6, 0.95);
+        }
 
-      for (let i = 0; i < PETAL_COUNT; i++) {
-        const p = {};
-        resetPetal(p, false);
-        petals.push(p);
-      }
+        for (let i = 0; i < PETAL_COUNT; i++) {
+            const p = {};
+            resetPetal(p, false);
+            petals.push(p);
+        }
 
-      // 花びらを「それっぽく」描く（単純なパス）
-      function drawPetal(x, y, size, rot, alpha) {
-        ctx.save();
-        ctx.translate(x, y);
-        ctx.rotate(rot);
-        ctx.globalAlpha = alpha;
+        function drawPetal(x, y, size, rot, alpha) {
+            ctx.save();
+            ctx.translate(x, y);
+            ctx.rotate(rot);
+            ctx.globalAlpha = alpha;
 
-        // ほんのりグラデーション
-        const g = ctx.createRadialGradient(-size * 0.2, -size * 0.2, 1, 0, 0, size * 1.4);
-        g.addColorStop(0, "rgba(255, 210, 230, 0.95)");
-        g.addColorStop(1, "rgba(255, 150, 190, 0.85)");
-        ctx.fillStyle = g;
+            const g = ctx.createRadialGradient(-size * 0.2, -size * 0.2, 1, 0, 0, size * 1.4);
+            g.addColorStop(0, "rgba(255, 210, 230, 0.95)");
+            g.addColorStop(1, "rgba(255, 150, 190, 0.85)");
+            ctx.fillStyle = g;
 
-        ctx.beginPath();
-        // しずく型 + へこみを作る
-        ctx.moveTo(0, -size);
-        ctx.bezierCurveTo(size * 0.9, -size * 0.9, size * 1.2, size * 0.2, 0, size);
-        ctx.bezierCurveTo(-size * 1.2, size * 0.2, -size * 0.9, -size * 0.9, 0, -size);
-        ctx.closePath();
-        ctx.fill();
+            ctx.beginPath();
+            ctx.moveTo(0, -size);
+            ctx.bezierCurveTo(size * 0.9, -size * 0.9, size * 1.2, size * 0.2, 0, size);
+            ctx.bezierCurveTo(-size * 1.2, size * 0.2, -size * 0.9, -size * 0.9, 0, -size);
+            ctx.closePath();
+            ctx.fill();
 
-        // 真ん中の筋
-        ctx.strokeStyle = "rgba(255,255,255,0.35)";
-        ctx.lineWidth = 1;
-        ctx.beginPath();
-        ctx.moveTo(0, -size * 0.9);
-        ctx.lineTo(0, size * 0.9);
-        ctx.stroke();
+            ctx.strokeStyle = "rgba(255,255,255,0.35)";
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            ctx.moveTo(0, -size * 0.9);
+            ctx.lineTo(0, size * 0.9);
+            ctx.stroke();
 
-        ctx.restore();
-      }
+            ctx.restore();
+        }
 
-      // ====== Sensor: accelerationIncludingGravity ======
-      const debugEl = document.getElementById("debug");
+        const debugEl = document.getElementById("debug");
 
-      // 重力方向（端末座標の g 成分）→ 画面内の傾きに反映
-      // ※横方向を少しだけ効かせたいので gain を控えめにしています
-      let tiltX = 0; // -1..1 くらいのイメージ（左/右の傾き）
-      let tiltY = 0;
+        let tiltX = 0;
+        let tiltY = 0;
 
-      // ローパスフィルタ（急なブレをならす）
-      const smooth = (prev, next, k) => prev + (next - prev) * k;
+        const smooth = (prev, next, k) => prev + (next - prev) * k;
 
-      function onMotion(e) {
-        const a = e.accelerationIncludingGravity;
-        if (!a) return;
+        function onMotion(e) {
+            const a = e.accelerationIncludingGravity;
+            if (!a) return;
 
-        // iOS/Androidで軸の向きが違い得るので、「とりあえず動く」前提の簡易マップ
-        // 端末を左右に傾けると x が変化しやすい想定
-        const ax = a.x ?? 0;
-        const ay = a.y ?? 0;
-        const az = a.z ?? 0;
+            const ax = a.x ?? 0;
+            const ay = a.y ?? 0;
+            const az = a.z ?? 0;
 
-        // g ≒ 9.8 を基準に正規化
-        const nx = Math.max(-1, Math.min(1, ax / 9.8));
-        const ny = Math.max(-1, Math.min(1, ay / 9.8));
+            const nx = Math.max(-1, Math.min(1, ax / 9.8));
+            const ny = Math.max(-1, Math.min(1, ay / 9.8));
 
-        tiltX = smooth(tiltX, nx, 0.12);
-        tiltY = smooth(tiltY, ny, 0.12);
+            tiltX = smooth(tiltX, nx, 0.12);
+            tiltY = smooth(tiltY, ny, 0.12);
 
-        debugEl.textContent = `accG x:${ax.toFixed(2)} y:${ay.toFixed(2)} z:${az.toFixed(2)} | tiltX:${tiltX.toFixed(2)}`;
-      }
+            debugEl.textContent =
+                `accG x:${ax.toFixed(2)} y:${ay.toFixed(2)} z:${az.toFixed(2)} | tiltX:${tiltX.toFixed(2)}`;
+        }
 
-      // iOS 13+ はユーザー操作で許可が必要
-      const btn = document.getElementById("btn");
-      btn.addEventListener("click", async () => {
-        try {
-          if (typeof DeviceMotionEvent !== "undefined" && typeof DeviceMotionEvent.requestPermission === "function") {
-            const res = await DeviceMotionEvent.requestPermission();
-            if (res !== "granted") {
-              btn.textContent = "許可されませんでした";
-              return;
+        const btn = document.getElementById("btn");
+        btn.addEventListener("click", async () => {
+            try {
+                if (typeof DeviceMotionEvent !== "undefined" &&
+                    typeof DeviceMotionEvent.requestPermission === "function") {
+                    const res = await DeviceMotionEvent.requestPermission();
+                    if (res !== "granted") {
+                        btn.textContent = "許可されませんでした";
+                        return;
+                    }
+                }
+                window.addEventListener("devicemotion", onMotion, { passive: true });
+                btn.textContent = "許可OK";
+                btn.disabled = true;
+            } catch (err) {
+                btn.textContent = "失敗しました";
             }
-          }
-          window.addEventListener("devicemotion", onMotion, { passive: true });
-          btn.textContent = "許可OK ✅";
-          btn.disabled = true;
-        } catch (err) {
-          console.error(err);
-          btn.textContent = "失敗しました";
+        });
+
+        let last = performance.now();
+
+        function tick(now) {
+            const dt = Math.min(0.05, (now - last) / 1000);
+            last = now;
+
+            ctx.clearRect(0, 0, innerWidth, innerHeight);
+            ctx.fillStyle = "rgba(11,16,32,1)";
+            ctx.fillRect(0, 0, innerWidth, innerHeight);
+
+            const wind = tiltX * 90;
+            const gravityBoost = tiltY * -20;
+
+            for (const p of petals) {
+                p.wobblePhase += p.wobbleSpeed * dt;
+
+                const wobble = Math.sin(p.wobblePhase) * p.wobbleAmp;
+                const vx = p.drift + wind;
+                const vy = p.fall + gravityBoost;
+
+                p.x += vx * dt + wobble * dt;
+                p.y += vy * dt;
+                p.rot += p.rotSpeed * dt;
+
+                if (p.y > innerHeight + 30 || p.x < -60 || p.x > innerWidth + 60) {
+                    resetPetal(p, true);
+                    if (wind > 30) p.x = rand(-30, innerWidth * 0.2);
+                    if (wind < -30) p.x = rand(innerWidth * 0.8, innerWidth + 30);
+                }
+
+                drawPetal(p.x, p.y, p.size, p.rot, p.alpha);
+            }
+
+            requestAnimationFrame(tick);
         }
-      });
-
-      // ====== Animation loop ======
-      let last = performance.now();
-
-      function tick(now) {
-        const dt = Math.min(0.05, (now - last) / 1000);
-        last = now;
-
-        // 背景（ほんのり）
-        ctx.clearRect(0, 0, innerWidth, innerHeight);
-        ctx.fillStyle = "rgba(11,16,32,1)";
-        ctx.fillRect(0, 0, innerWidth, innerHeight);
-
-        // 傾き → 落下ベクトルへ反映
-        // ここが肝：x方向の速度に tiltX を少しだけ足す（斜めに流れる）
-        const wind = tiltX * 90;          // px/s（左右傾きで風が変わる）
-        const gravityBoost = (tiltY * -20); // 上下傾きで落下が少し変わる（控えめ）
-
-        for (const p of petals) {
-          p.wobblePhase += p.wobbleSpeed * dt;
-
-          const wobble = Math.sin(p.wobblePhase) * p.wobbleAmp;
-          const vx = p.drift + wind;
-          const vy = p.fall + gravityBoost;
-
-          p.x += (vx * dt) + wobble * dt;
-          p.y += vy * dt;
-          p.rot += p.rotSpeed * dt;
-
-          // 画面外に出たら上に戻す
-          if (p.y > innerHeight + 30 || p.x < -60 || p.x > innerWidth + 60) {
-            resetPetal(p, true);
-            // 風が強い時は端から入ってくる感じに
-            if (wind > 30) p.x = rand(-30, innerWidth * 0.2);
-            if (wind < -30) p.x = rand(innerWidth * 0.8, innerWidth + 30);
-          }
-
-          drawPetal(p.x, p.y, p.size, p.rot, p.alpha);
-        }
-
         requestAnimationFrame(tick);
-      }
-      requestAnimationFrame(tick);
     </script>
-  </body>
+</body>
+
 </html>
